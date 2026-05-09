@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>여행 블로그</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #F4F1EB; --ink: #1A1A17; --muted: #8C8679;
+      --subtle: #D6D2C8; --fill: #EBE8E0;
+      --nav-h: 64px; --type-h: 44px; --strip-h: 52px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+    /* ─── NAV ─── */
+    nav { position: fixed; inset: 0 0 auto 0; z-index: 250; background: var(--bg); border-bottom: 1px solid var(--subtle); height: var(--nav-h); display: flex; align-items: center; gap: 2.5rem; padding: 0 3rem; }
+    .persona-wrap { flex-shrink: 0; }
+    .persona-ring { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; border: 1px solid var(--subtle); background: var(--fill); position: relative; transition: border-color .2s; }
+    .persona-ring img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .persona-svg { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    .persona-edit-hint { position: absolute; inset: 0; border-radius: 50%; background: rgba(26,26,23,.55); color: #fff; font-size: .48rem; letter-spacing: .08em; text-transform: uppercase; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .2s; }
+    .edit-mode .persona-ring { cursor: pointer; }
+    .edit-mode .persona-ring:hover .persona-edit-hint { opacity: 1; }
+
+    /* 나라 필터 */
+    .nav-filters { display: flex; gap: 0; flex: 1; overflow-x: auto; scrollbar-width: none; }
+    .nav-filters::-webkit-scrollbar { display: none; }
+    .filter-btn { background: none; border: none; border-bottom: 1.5px solid transparent; font-family: 'Pretendard', sans-serif; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); cursor: pointer; padding: 0 1rem; min-height: 44px; display: flex; align-items: center; white-space: nowrap; transition: color .2s, border-color .2s; }
+    .filter-btn:hover { color: var(--ink); }
+    .filter-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
+    .btn-ghost { flex-shrink: 0; background: none; border: 1px solid var(--subtle); font-family: 'Pretendard', sans-serif; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink); cursor: pointer; padding: 0 1.25rem; min-height: 36px; display: flex; align-items: center; transition: background .2s, color .2s, border-color .2s; }
+    .btn-ghost:hover, .btn-ghost.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    /* 편집 버튼: 기본 숨김, 비밀번호 인증 후에만 표시 */
+    #editToggle { display: none; }
+    #editToggleMobile { display: none; }
+    @media (min-width: 769px) { body.edit-active #editToggle { display: flex; } }
+    body.edit-active #editToggleMobile { display: flex; }
+    .hamburger { display: none; flex-shrink: 0; background: none; border: none; cursor: pointer; flex-direction: column; gap: 5px; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
+    .hamburger span { display: block; width: 20px; height: 1px; background: var(--ink); transition: transform .3s, opacity .3s; }
+    .hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+    .mobile-menu { display: none; position: fixed; top: var(--nav-h); left: 0; right: 0; background: var(--bg); border-bottom: 1px solid var(--subtle); z-index: 249; overflow: hidden; max-height: 0; padding: 0 1.5rem; transition: max-height .3s ease, padding .3s ease; }
+    .mobile-menu.open { max-height: 120px; padding: .875rem 1.5rem; }
+    .mobile-edit-btn { width: 100%; justify-content: center; }
+    .mobile-filter-strip { display: none; position: fixed; top: var(--nav-h); left: 0; right: 0; z-index: 248; background: var(--bg); border-bottom: 1px solid var(--subtle); height: var(--strip-h); overflow-x: auto; scrollbar-width: none; padding: 0 1.5rem; gap: 4px; align-items: center; }
+    .mobile-filter-strip::-webkit-scrollbar { display: none; }
+    .chip { flex-shrink: 0; background: none; border: 1px solid var(--subtle); font-family: 'Pretendard', sans-serif; font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); cursor: pointer; padding: 0 1rem; white-space: nowrap; height: 32px; min-width: 44px; display: flex; align-items: center; transition: color .2s, background .2s, border-color .2s; }
+    .chip:hover { color: var(--ink); border-color: rgba(26,26,23,.35); }
+    .chip.active { color: var(--bg); background: var(--ink); border-color: var(--ink); }
+
+    /* ─── 장소유형 필터 ─── */
+    .type-filter-bar { display: flex; position: fixed; top: var(--nav-h); left: 0; right: 0; z-index: 247; background: var(--bg); border-bottom: 1px solid var(--subtle); height: var(--type-h); align-items: center; padding: 0 3rem; overflow-x: auto; scrollbar-width: none; gap: 0; }
+    .type-filter-bar::-webkit-scrollbar { display: none; }
+    .type-btn { background: none; border: none; border-bottom: 1.5px solid transparent; font-family: 'Pretendard', sans-serif; font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); cursor: pointer; padding: 0 .9rem; min-height: var(--type-h); display: flex; align-items: center; white-space: nowrap; transition: color .2s, border-color .2s; }
+    .type-btn:hover { color: var(--ink); }
+    .type-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
+    .type-strip { display: none; position: fixed; top: calc(var(--nav-h) + var(--strip-h)); left: 0; right: 0; z-index: 246; background: var(--bg); border-bottom: 1px solid var(--subtle); height: var(--type-h); overflow-x: auto; scrollbar-width: none; padding: 0 1.5rem; gap: 4px; align-items: center; }
+    .type-strip::-webkit-scrollbar { display: none; }
+    .type-chip { flex-shrink: 0; background: none; border: 1px solid var(--subtle); font-family: 'Pretendard', sans-serif; font-size: .62rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); cursor: pointer; padding: 0 .85rem; white-space: nowrap; height: 28px; min-width: 44px; display: flex; align-items: center; transition: color .2s, background .2s, border-color .2s; }
+    .type-chip:hover { color: var(--ink); border-color: rgba(26,26,23,.35); }
+    .type-chip.active { color: var(--bg); background: var(--ink); border-color: var(--ink); }
+
+    /* ─── GRID ─── */
+    .page-wrap { max-width: 1280px; margin: 0 auto; padding: calc(var(--nav-h) + var(--type-h) + 3.5rem) 3rem 8rem; }
+    .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4.5rem 3rem; margin-top: 2rem; }
+
+    /* ─── CARD ─── */
+    .card { cursor: default; position: relative; }
+    .card.hidden { display: none; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .card.visible { animation: fadeUp .5s ease forwards; }
+    .card-img-wrap { position: relative; aspect-ratio: 4/3; overflow: hidden; background: var(--fill); }
+    .card-img-wrap img, .card-thumb-video { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .9s cubic-bezier(.25,.46,.45,.94); }
+    .card:hover .card-img-wrap img, .card:hover .card-thumb-video { transform: scale(1.04); }
+    .img-overlay { position: absolute; inset: 0; background: rgba(26,26,23,.42); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem; color: #fff; font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; opacity: 0; transition: opacity .25s; cursor: pointer; }
+    .img-overlay svg { width: 20px; height: 20px; }
+    .edit-mode .card-img-wrap:hover .img-overlay { opacity: 1; }
+    .card-delete-btn, .card-edit-btn { display: none; position: absolute; z-index: 10; background: rgba(26,26,23,.8); color: #fff; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: .85rem; line-height: 1; align-items: center; justify-content: center; transition: background .2s; }
+    .card-delete-btn:hover, .card-edit-btn:hover { background: rgba(26,26,23,1); }
+    .card-delete-btn { top: .65rem; right: .65rem; }
+    .card-edit-btn { top: .65rem; left: .65rem; font-size: .7rem; }
+    .edit-mode .card-delete-btn, .edit-mode .card-edit-btn { display: flex; }
+    .card-meta { margin-top: 1.1rem; font-size: .65rem; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; }
+    .card-title { margin-top: .6rem; font-size: 1.2rem; font-weight: 700; line-height: 1.3; letter-spacing: -.01em; }
+    .card-excerpt { margin-top: .6rem; font-size: .9rem; line-height: 1.8; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-more-btn { display: inline-flex; align-items: center; margin-top: 1.4rem; background: var(--ink); color: var(--bg); border: none; font-family: 'Pretendard', sans-serif; font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; padding: .8rem 1.6rem; cursor: pointer; min-height: 44px; transition: opacity .2s; }
+    .card-more-btn:hover { opacity: .72; }
+    .edit-mode .card-more-btn { display: none; }
+    .edit-mode [contenteditable] { outline: 1px dashed rgba(26,26,23,.2); padding: 2px 4px; cursor: text; }
+    .edit-mode [contenteditable]:focus { outline: 1px solid var(--ink); background: rgba(255,255,255,.5); }
+
+    /* ─── DETAIL ─── */
+    #detail { position: fixed; inset: 0; background: var(--bg); z-index: 200; overflow-y: auto; opacity: 0; pointer-events: none; transition: opacity .35s; padding-top: calc(var(--nav-h) + var(--type-h)); }
+    #detail.open { opacity: 1; pointer-events: all; }
+    .detail-close { position: fixed; top: calc(var(--nav-h) + var(--type-h) + .75rem); right: 2.5rem; z-index: 260; background: rgba(244,241,235,.9); backdrop-filter: blur(8px); border: 1px solid var(--subtle); width: 44px; height: 44px; cursor: pointer; font-size: .82rem; display: flex; align-items: center; justify-content: center; color: var(--ink); transition: background .2s; }
+    .detail-close:hover { background: #fff; }
+    .detail-hero { width: 100%; height: 80vh; overflow: hidden; background: var(--fill); }
+    .detail-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .detail-hero video { width: 100%; height: 100%; object-fit: contain; display: block; background: #0c0c0a; }
+    .detail-body { max-width: 720px; margin: 0 auto; padding: 5rem 2rem 8rem; }
+    .detail-meta { font-size: .65rem; color: var(--muted); text-transform: uppercase; letter-spacing: .14em; margin-bottom: 1.5rem; }
+    .detail-meta .sep { pointer-events: none; user-select: none; }
+    .detail-title { font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; line-height: 1.15; letter-spacing: -.02em; margin-bottom: 1rem; }
+    .detail-location { display: flex; align-items: center; gap: .35rem; margin-bottom: 2rem; }
+    .detail-location a { display: inline-flex; align-items: center; gap: .35rem; font-size: .81rem; color: #020202; text-decoration: none; font-family: 'Pretendard', sans-serif; line-height: 1.4; }
+    .detail-location a:hover { text-decoration: underline; }
+    .detail-location svg { flex-shrink: 0; }
+    .detail-loc-wrap { display: flex; align-items: center; gap: .35rem; }
+    .detail-loc-input { font-size: .75rem; font-family: 'Pretendard', sans-serif; color: var(--muted); background: none; border: none; border-bottom: 1px dashed rgba(26,26,23,.25); outline: none; padding: .1rem 0; min-width: 220px; max-width: 420px; width: 100%; transition: border-color .2s; }
+    .detail-loc-input::placeholder { color: var(--subtle); font-style: italic; }
+    .detail-loc-input:focus { border-bottom-color: var(--ink); color: var(--ink); }
+    .detail-loc-preview { font-size: .78rem; color: var(--ink); margin-top: .22rem; padding-left: calc(13px + .35rem); font-style: normal; }
+    .detail-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--subtle); }
+    .detail-footer-mobile { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 205; background: var(--bg); border-top: 1px solid var(--subtle); padding: .875rem 1.5rem; gap: .75rem; }
+    .cta-btn { background: var(--ink); color: var(--bg); border: none; font-family: 'Pretendard', sans-serif; font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; padding: .875rem 1.75rem; cursor: pointer; min-height: 44px; transition: opacity .2s; }
+    .cta-btn:hover { opacity: .72; }
+    .cta-btn:disabled { opacity: .25; cursor: default; }
+
+    /* ─── BLOCK ROWS ─── */
+    .detail-blocks { }
+    .block-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 1.25rem; }
+    .block-move-col { display: none; flex-direction: column; gap: 3px; flex-shrink: 0; padding-top: 3px; }
+    .edit-mode .block-move-col { display: flex; }
+    .block-content { flex: 1; min-width: 0; }
+    .move-btn { width: 26px; height: 24px; background: none; color: var(--muted); border: 1px solid var(--subtle); border-radius: 3px; cursor: pointer; font-size: .78rem; display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
+    .move-btn:hover { background: var(--fill); color: var(--ink); }
+
+    /* ─── 텍스트 블록 ─── */
+    .body-text-block { font-size: 1rem; line-height: 2; color: var(--ink); }
+    .body-text-block p { margin-bottom: 1.75rem; }
+    .edit-mode .body-text-block[contenteditable="true"] { outline: 1px dashed rgba(26,26,23,.2); padding: .5rem .75rem; min-height: 3rem; border-radius: 2px; }
+    .edit-mode .body-text-block[contenteditable="true"]:focus { outline: 1px solid var(--ink); background: rgba(255,255,255,.4); }
+    .text-blk-del { display: none; margin-top: .35rem; background: none; border: none; color: var(--subtle); font-family: 'Pretendard', sans-serif; font-size: .6rem; letter-spacing: .08em; cursor: pointer; padding: 0; }
+    .edit-mode .text-blk-del { display: inline-block; }
+    .text-blk-del:hover { color: var(--ink); }
+
+    /* ─── 이미지 그룹 블록 ─── */
+    .img-group-wrap { position: relative; }
+
+    /* 열 전환 버튼 */
+    .cols-toggle { position: absolute; top: .4rem; right: .4rem; z-index: 5; background: rgba(26,26,23,.82); color: #fff; border: none; border-radius: 3px; cursor: pointer; font-family: 'Pretendard', sans-serif; font-size: .6rem; letter-spacing: .06em; padding: .28rem .6rem; display: none; transition: background .15s; }
+    .edit-mode .cols-toggle { display: block; }
+    .cols-toggle:hover { background: rgba(26,26,23,1); }
+
+    /* 이미지 그리드 */
+    .img-group { display: grid; gap: .4rem; }
+    .img-group.cols-1 { grid-template-columns: 1fr; }
+    .img-group.cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .img-group.cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+    /* 이미지 셀 */
+    .img-cell { position: relative; aspect-ratio: 4/3; overflow: hidden; background: var(--fill); }
+    .img-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* 캡션 */
+    .img-caption { font-size: .7rem; color: var(--muted); letter-spacing: .04em; padding: .3rem 0 0; line-height: 1.5; }
+    .img-caption[contenteditable="true"] { display: block; min-height: 1.4rem; }
+    .img-caption:empty::before { content: attr(data-ph); color: var(--subtle); font-style: italic; }
+
+    /* 셀 컨트롤 오버레이 */
+    .cell-ctrl { position: absolute; top: .35rem; right: .35rem; display: none; gap: .2rem; z-index: 4; }
+    .edit-mode .cell-ctrl { display: flex; }
+    .cell-btn { height: 22px; padding: 0 .4rem; background: rgba(26,26,23,.82); color: #fff; border: none; border-radius: 3px; cursor: pointer; font-size: .58rem; font-family: 'Pretendard', sans-serif; display: flex; align-items: center; transition: background .15s; }
+    .cell-btn:hover { background: rgba(26,26,23,1); }
+
+    /* 이미지 추가 셀 */
+    .img-add-cell { aspect-ratio: 4/3; border: 1.5px dashed var(--subtle); display: none; align-items: center; justify-content: center; cursor: pointer; background: none; transition: border-color .15s; }
+    .edit-mode .img-add-cell { display: flex; }
+    .img-add-cell:hover { border-color: var(--ink); }
+    .img-add-cell span { font-size: 1.6rem; color: var(--subtle); line-height: 1; }
+    .img-add-cell:hover span { color: var(--muted); }
+
+    /* 그룹 삭제 버튼 */
+    .img-grp-del { display: none; margin-top: .35rem; background: none; border: none; color: var(--subtle); font-family: 'Pretendard', sans-serif; font-size: .6rem; letter-spacing: .08em; cursor: pointer; padding: 0; }
+    .edit-mode .img-grp-del { display: inline-block; }
+    .img-grp-del:hover { color: var(--ink); }
+
+    /* ─── 블록 하단 액션 버튼 ─── */
+    .block-actions { display: none; gap: .75rem; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--subtle); }
+    .edit-mode .block-actions { display: flex; }
+    .block-action-btn { flex: 1; border: 1px dashed var(--subtle); background: none; color: var(--muted); font-family: 'Pretendard', sans-serif; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; padding: .875rem; cursor: pointer; min-height: 44px; transition: border-color .2s, color .2s; }
+    .block-action-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+    /* ─── EDIT BAR ─── */
+    #edit-bar { position: fixed; bottom: 2.5rem; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); display: flex; z-index: 255; opacity: 0; pointer-events: none; transition: opacity .3s; box-shadow: 0 8px 40px rgba(26,26,23,.18); }
+    #edit-bar.show { opacity: 1; pointer-events: all; }
+    #edit-bar button { background: none; border: none; color: inherit; font-family: 'Pretendard', sans-serif; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; padding: 1rem 2rem; cursor: pointer; border-right: 1px solid rgba(255,255,255,.12); white-space: nowrap; min-height: 44px; transition: background .2s; }
+    #edit-bar button:last-child { border-right: none; }
+    #edit-bar button:hover { background: rgba(255,255,255,.1); }
+
+    /* ─── EDIT PANEL ─── */
+    #edit-panel { position: fixed; top: 0; right: -480px; width: 440px; height: 100vh; background: #EFECE5; box-shadow: -4px 0 40px rgba(26,26,23,.1); z-index: 300; padding: 2.5rem; overflow-y: auto; transition: right .35s cubic-bezier(.25,.46,.45,.94); }
+    #edit-panel.open { right: 0; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--subtle); }
+    .panel-header h2 { font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+    .panel-x { background: none; border: none; font-size: 1rem; cursor: pointer; color: var(--muted); min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+    .panel-x:hover { color: var(--ink); }
+    .field { margin-bottom: 1.4rem; }
+    .field label { display: block; font-size: .62rem; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; margin-bottom: .5rem; }
+    .field input, .field select, .field textarea { width: 100%; border: none; border-bottom: 1px solid var(--subtle); background: transparent; font-family: 'Pretendard', sans-serif; font-size: .9rem; padding: .5rem 0; color: var(--ink); outline: none; transition: border-color .2s; min-height: 44px; }
+    .field input:focus, .field select:focus { border-bottom-color: var(--ink); }
+    .field textarea { resize: vertical; min-height: 90px; border: 1px solid var(--subtle); padding: .6rem .75rem; background: rgba(255,255,255,.4); }
+    .field textarea:focus { border-color: var(--ink); outline: none; }
+    .field select { cursor: pointer; -webkit-appearance: none; }
+    .upload-area { border: 1px dashed var(--subtle); padding: 1.5rem 1rem; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
+    .upload-area:hover, .upload-area.drag-over { border-color: var(--ink); background: rgba(255,255,255,.2); }
+    .upload-icon { font-size: 1.25rem; margin-bottom: .4rem; color: var(--muted); }
+    .upload-hint { font-size: .7rem; color: var(--muted); line-height: 1.7; }
+    .upload-hint strong { color: var(--ink); }
+    .upload-preview img, .upload-preview video { width: 100%; max-height: 160px; object-fit: cover; display: block; margin-top: .75rem; }
+    .upload-filename { margin-top: .4rem; font-size: .65rem; color: var(--muted); word-break: break-all; }
+    .btn-submit { background: var(--ink); color: var(--bg); border: none; font-family: 'Pretendard', sans-serif; font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; padding: 1rem; width: 100%; cursor: pointer; margin-top: .75rem; min-height: 44px; transition: opacity .2s; }
+    .btn-submit:hover { opacity: .8; }
+
+    /* ─── PW MODAL ─── */
+    #pw-modal { position: fixed; inset: 0; background: rgba(26,26,23,.55); z-index: 400; display: none; align-items: center; justify-content: center; }
+    .pw-box { background: var(--bg); padding: 2.5rem; width: min(340px, 90vw); border: 1px solid var(--subtle); }
+    .pw-box h3 { font-size: .7rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 1.5rem; }
+    .pw-box input { width: 100%; border: none; border-bottom: 1px solid var(--subtle); background: transparent; font-family: 'Pretendard', sans-serif; font-size: .95rem; padding: .5rem 0; color: var(--ink); outline: none; transition: border-color .2s; margin-bottom: 1.5rem; display: block; }
+    .pw-box input:focus { border-bottom-color: var(--ink); }
+    .pw-btns { display: flex; gap: .75rem; }
+    .pw-btns button { flex: 1; border: 1px solid var(--subtle); background: none; font-family: 'Pretendard', sans-serif; font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; padding: .875rem; cursor: pointer; min-height: 44px; transition: background .2s, color .2s, border-color .2s; color: var(--ink); }
+    .pw-btns button:hover { background: var(--fill); }
+    .pw-btns .pw-confirm { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    .pw-btns .pw-confirm:hover { opacity: .8; }
+
+    /* ─── TOAST ─── */
+    #toast { position: fixed; bottom: 2.5rem; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); font-size: .68rem; letter-spacing: .08em; padding: .75rem 1.5rem; z-index: 999; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+    #toast.show { opacity: 1; }
+
+    /* ─── TABLET ─── */
+    @media (max-width: 1279px) {
+      .page-wrap { padding-left: 2.5rem; padding-right: 2.5rem; }
+      .card-grid { gap: 3.5rem 2.5rem; }
+      .type-filter-bar { padding: 0 2.5rem; }
+    }
+
+    /* ─── MOBILE ─── */
+    @media (max-width: 768px) {
+      nav { padding: 0 1.5rem; gap: 1rem; }
+      .nav-filters { display: none; }
+      #editToggle { display: none; }
+      .hamburger { display: flex; margin-left: auto; }
+      .mobile-menu { display: block; }
+      .mobile-filter-strip { display: flex; }
+      .type-filter-bar { display: none; }
+      .type-strip { display: flex; }
+      .page-wrap { padding: calc(var(--nav-h) + var(--strip-h) + var(--type-h) + 2rem) 1.5rem 6rem; }
+      .card-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+      #detail { padding-top: calc(var(--nav-h) + var(--strip-h) + var(--type-h)); }
+      .detail-close { top: calc(var(--nav-h) + var(--strip-h) + var(--type-h) + .75rem); }
+      .detail-hero { height: 55vh; }
+      .detail-body { padding: 3rem 1.5rem 7rem; }
+      .detail-footer { display: none; }
+      .detail-footer-mobile { display: flex; }
+      #edit-panel { width: 100%; right: -100%; }
+      #edit-panel.open { right: 0; }
+      #edit-bar { bottom: 5.5rem; }
+      #toast { bottom: 5.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="persona-wrap">
+      <div class="persona-ring" id="personaRing">
+        <div class="persona-svg" id="personaDefault">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8" r="4" stroke="#8C8679" stroke-width="1.2"/>
+            <path d="M4 20c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="#8C8679" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <img id="personaImg" src="" alt="" style="display:none">
+        <div class="persona-edit-hint">변경</div>
+      </div>
+      <input type="file" id="personaFile" accept=".jpg,.jpeg,.png,.webp,.gif" style="display:none">
+    </div>
+    <div class="nav-filters" id="navFilters"></div>
+    <button class="btn-ghost" id="editToggle">편집 모드</button>
+    <button class="hamburger" id="hamburger" aria-label="메뉴"><span></span><span></span><span></span></button>
+  </nav>
+
+  <div class="type-filter-bar" id="typeFilterBar"></div>
+  <div class="mobile-menu" id="mobileMenu">
+    <button class="btn-ghost mobile-edit-btn" id="editToggleMobile">편집 모드</button>
+  </div>
+  <div class="mobile-filter-strip" id="mobileFilterStrip"></div>
+  <div class="type-strip" id="typeStrip"></div>
+
+  <div class="page-wrap">
+    <div class="card-grid" id="cardGrid"></div>
+  </div>
+
+  <!-- DETAIL -->
+  <div id="detail">
+    <button class="detail-close" id="detailClose">✕</button>
+    <div class="detail-hero" id="detailMedia"></div>
+    <div class="detail-body">
+      <div class="detail-meta" id="d-meta"></div>
+      <h1 class="detail-title" id="d-title"></h1>
+      <div id="d-location"></div>
+      <div class="detail-blocks" id="d-blocks"></div>
+      <div class="block-actions" id="d-block-actions">
+        <button class="block-action-btn" id="d-add-img">+ 사진 추가</button>
+        <button class="block-action-btn" id="d-add-text">+ 텍스트 추가</button>
+      </div>
+      <div class="detail-footer">
+        <button class="cta-btn" id="prevBtn">← 이전 글</button>
+        <button class="cta-btn" id="nextBtn">다음 글 →</button>
+      </div>
+    </div>
+    <div class="detail-footer-mobile">
+      <button class="cta-btn" id="prevBtnM" style="flex:1">← 이전</button>
+      <button class="cta-btn" id="nextBtnM" style="flex:1">다음 →</button>
+    </div>
+  </div>
+
+  <!-- 숨겨진 파일 인풋 -->
+  <input type="file" id="f-file" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov" style="display:none">
+  <input type="file" id="d-img-file" accept=".jpg,.jpeg,.png,.webp" style="display:none">
+
+  <div id="edit-bar">
+    <button id="addBtn">＋ 새 글 추가</button>
+    <button id="saveBtn">저장 완료</button>
+  </div>
+
+  <div id="edit-panel">
+    <div class="panel-header">
+      <h2>새 글 추가</h2>
+      <button class="panel-x" id="panelClose">✕</button>
+    </div>
+    <div class="field"><label>국가</label>
+      <select id="f-country">
+        <option>일본</option><option>프랑스</option><option>태국</option>
+        <option>이탈리아</option><option>스페인</option><option>기타</option>
+      </select>
+    </div>
+    <div class="field"><label>장소 유형</label>
+      <select id="f-type">
+        <option value="카페">카페</option><option value="미술관">미술관</option>
+        <option value="맛집">맛집</option><option value="쇼핑">쇼핑</option>
+        <option value="자연">자연</option><option value="기타" selected>기타</option>
+      </select>
+    </div>
+    <div class="field"><label>도시</label><input type="text" id="f-city" placeholder="예: 도쿄"></div>
+    <div class="field"><label>날짜</label><input type="date" id="f-date"></div>
+    <div class="field"><label>제목</label><input type="text" id="f-title" placeholder="글 제목"></div>
+    <div class="field"><label>미리보기</label><textarea id="f-preview" placeholder="카드에 표시될 짧은 소개글"></textarea></div>
+    <div class="field"><label>본문 (단락은 빈 줄로 구분)</label><textarea id="f-body" style="min-height:160px" placeholder="여행 이야기를 써주세요..."></textarea></div>
+    <div class="field">
+      <label>대표 이미지 / 영상</label>
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">↑</div>
+        <div class="upload-hint">클릭하거나 드래그<br><strong>이미지:</strong> jpg, png, webp &nbsp;·&nbsp; <strong>영상:</strong> mp4, mov</div>
+        <div class="upload-preview" id="uploadPreview"></div>
+        <div class="upload-filename" id="uploadFilename"></div>
+      </div>
+    </div>
+    <button class="btn-submit" id="submitPost">글 추가하기</button>
+  </div>
+
+  <div id="pw-modal">
+    <div class="pw-box">
+      <h3>편집 모드</h3>
+      <input type="password" id="pw-input" placeholder="비밀번호">
+      <div class="pw-btns">
+        <button class="pw-confirm" id="pw-ok">확인</button>
+        <button id="pw-cancel">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    const FALLBACK = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80';
+    const EDIT_PW  = 'woosooj1!';
+    const MEDIA_STORE = {};
+    const PLACE_TYPES = ['전체','카페','미술관','맛집','쇼핑','자연','기타'];
+    let pendingFile = null;
+    let dImgMode = null; // {mode:'new'} | {mode:'add',gi} | {mode:'replace',gi,ii}
+
+    function isVideo(src) { return /^videos\/|\.(mp4|mov|webm)(\?|$)/i.test(src || ''); }
+    function mediaSrc(src) { return MEDIA_STORE[src] || src; }
+
+    /* body 정규화: 문자열 또는 구버전 블록 → 최신 형식 */
+    function normBody(b) {
+      if (!Array.isArray(b)) return [{ type:'text', content: b || '' }];
+      return b.map(blk => {
+        if (blk.type === 'image') {
+          return { type:'img-group', cols: blk.layout || 1, images:[{ src: blk.src, caption: blk.caption || '' }] };
+        }
+        return blk;
+      });
+    }
+
+    let posts = [
+      { id:1, country:'일본', city:'도쿄', date:'2025.10.15', placeType:'기타',
+        title:'도쿄의 밤, 시부야를 걷다',
+        preview:'수천 개의 네온사인이 빗속에 번지는 순간, 나는 비로소 이 도시의 속도에 발을 맞출 수 있었다.',
+        body:[{type:'text',content:'<p>도쿄는 늘 빠르게 움직인다. 지하철 안의 사람들, 스크램블 교차로를 건너는 발걸음들, 자동판매기에서 캔커피를 꺼내는 손가락. 모든 것이 리듬처럼 맞물려 돌아간다.</p><p>시부야에 도착했을 때는 저녁 일곱시였다. 비가 막 내리기 시작했고, 우산을 펴기도 전에 어깨가 젖었다. 도쿄의 비는 어쩐지 도시를 더 진짜처럼 보이게 만든다.</p><p>스크램블 교차로 앞 스타벅스 2층 창가 자리에 앉아 커피 한 잔을 시켰다. 아래를 내려다보면 수백 명이 동시에 교차로를 건넌다. 누구도 부딪히지 않는다.</p>'}],
+        img:'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80' },
+      { id:2, country:'프랑스', city:'파리', date:'2025.07.03', placeType:'카페',
+        title:'파리에서 보낸 일요일 오후',
+        preview:'마레 지구의 돌바닥 위를 걷다가, 작은 책방 앞에서 멈춰 섰다. 쇼윈도 안의 빛이 너무 좋아서.',
+        body:[{type:'text',content:'<p>파리의 일요일은 다른 도시와 다르다. 대부분의 상점이 문을 닫고, 거리는 한층 조용해진다. 그 조용함이 오히려 도시의 본모습을 드러낸다.</p><p>마레 지구를 걸었다. 좁고 구불구불한 골목, 17세기에 지어진 건물들, 세월에 깎인 돌바닥. 파리는 이렇게 오래된 것들을 버리지 않고 끌어안는다.</p><p>작은 책방을 발견했다. 쇼윈도 안으로 오후의 햇살이 비스듬히 들어오고 있었고, 먼지 낀 책들이 그 빛 속에서 빛나고 있었다.</p>'}],
+        img:'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80' },
+      { id:3, country:'태국', city:'방콕', date:'2025.03.22', placeType:'기타',
+        title:'방콕, 왓 포의 새벽',
+        preview:'새벽 다섯시, 사원 안에 혼자 서 있었다. 향 냄새와 함께 빛이 천천히 스며들었다.',
+        body:[{type:'text',content:'<p>왓 포는 방콕에서 가장 오래된 사원 중 하나다. 새벽 다섯시에 문을 여는데, 그 시간을 노려 갔다. 관광객이 없는 사원은 전혀 다른 곳이 된다.</p><p>46미터 길이의 와불상 앞에 섰다. 발바닥에 새겨진 108개의 길상 문양을 보고 있으면 시간이 어떻게 가는지 모른다.</p><p>향 연기가 아침 햇살과 섞여 뿌옇게 퍼졌다. 스님 한 분이 조용히 예불을 드리고 있었다.</p>'}],
+        img:'https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=800&q=80' },
+      { id:4, country:'이탈리아', city:'로마', date:'2025.05.18', placeType:'기타',
+        title:'콜로세움의 돌 위에 앉아',
+        preview:'2000년의 시간이 쌓인 돌 위에 앉아 샌드위치를 먹었다. 이것도 역사의 일부가 되는 걸까.',
+        body:[{type:'text',content:'<p>콜로세움은 기대보다 훨씬 크다. 사진으로 보면 그냥 오래된 원형 건물 같지만, 실제로 앞에 서면 압도적인 크기와 두께에 숨이 막힌다.</p><p>내부에서 위층을 올려다보면 하늘이 타원형으로 보인다. 한때 이 공간에 5만 명이 앉았다고 한다.</p>'}],
+        img:'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&q=80' },
+      { id:5, country:'일본', city:'교토', date:'2025.10.28', placeType:'자연',
+        title:'단풍 든 아라시야마',
+        preview:'대나무 숲길을 걷다 문득 멈췄다. 바람이 대나무를 흔들 때 나는 소리가 음악 같았다.',
+        body:[{type:'text',content:'<p>아라시야마는 교토에서도 특별한 곳이다. 특히 단풍이 드는 11월 전후가 가장 아름답다.</p><p>대나무 숲길을 걸었다. 키 큰 대나무들이 좌우에 빽빽이 서서 하늘을 좁게 만든다. 그 사이로 빛이 기울어 들어온다. 바람이 불면 대나무들이 흔들리며 사각사각 소리를 낸다.</p>'}],
+        img:'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&q=80' },
+      { id:6, country:'스페인', city:'바르셀로나', date:'2025.08.10', placeType:'미술관',
+        title:'사그라다 파밀리아, 빛의 건축',
+        preview:'스테인드글라스를 통해 들어온 빛이 바닥을 물들였다. 가우디는 이 순간을 계획했을까.',
+        body:[{type:'text',content:'<p>사그라다 파밀리아는 1882년부터 짓기 시작해 아직도 완성되지 않은 성당이다. 가우디가 1926년에 세상을 떠났지만, 그의 설계는 계속 이어지고 있다.</p><p>내부에 들어서는 순간, 말을 잃었다. 숲처럼 솟아오른 기둥들, 그 기둥들 사이로 쏟아지는 스테인드글라스의 빛.</p>'}],
+        img:'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800&q=80' }
+    ];
+
+    function savePosts() { try { localStorage.setItem('wander_posts', JSON.stringify(posts)); } catch(e) {} }
+    function loadPosts() {
+      try {
+        const s = localStorage.getItem('wander_posts');
+        if (s) { posts = JSON.parse(s); posts.forEach(p => { p.body = normBody(p.body); }); }
+      } catch(e) {}
+    }
+
+    let filter = 'all', typeFilter = '전체', currentIdx = -1, editMode = false, sessionAuth = false;
+
+    /* ── 퍼스나콘 ── */
+    function loadPersona() {
+      const saved = localStorage.getItem('wander_persona');
+      if (!saved) return;
+      document.getElementById('personaImg').src = saved;
+      document.getElementById('personaImg').style.display = 'block';
+      document.getElementById('personaDefault').style.display = 'none';
+    }
+    document.getElementById('personaRing').addEventListener('click', () => {
+      if (editMode) document.getElementById('personaFile').click();
+    });
+    document.getElementById('personaFile').addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const d = ev.target.result;
+        localStorage.setItem('wander_persona', d);
+        document.getElementById('personaImg').src = d;
+        document.getElementById('personaImg').style.display = 'block';
+        document.getElementById('personaDefault').style.display = 'none';
+        toast('퍼스나콘이 변경되었습니다');
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    });
+
+    /* ── 필터 ── */
+    function getCountries() { return ['all', ...new Set(posts.map(p => p.country))]; }
+
+    function buildFilterBtns() {
+      const nav = document.getElementById('navFilters');
+      const strip = document.getElementById('mobileFilterStrip');
+      nav.innerHTML = strip.innerHTML = '';
+      getCountries().forEach(c => {
+        const label = c === 'all' ? '전체' : c;
+        [['filter-btn', nav], ['chip', strip]].forEach(([cls, el]) => {
+          const btn = document.createElement('button');
+          btn.className = cls + (c === filter ? ' active' : '');
+          btn.dataset.filter = c; btn.textContent = label;
+          btn.addEventListener('click', () => { filter = c; applyFilters(); });
+          el.appendChild(btn);
+        });
+      });
+    }
+
+    function buildTypeBtns() {
+      const bar   = document.getElementById('typeFilterBar');
+      const strip = document.getElementById('typeStrip');
+      bar.innerHTML = strip.innerHTML = '';
+      PLACE_TYPES.forEach(t => {
+        [['type-btn', bar], ['type-chip', strip]].forEach(([cls, el]) => {
+          const btn = document.createElement('button');
+          btn.className = cls + (t === typeFilter ? ' active' : '');
+          btn.dataset.type = t; btn.textContent = t;
+          btn.addEventListener('click', () => { typeFilter = t; applyFilters(); });
+          el.appendChild(btn);
+        });
+      });
+    }
+
+    function applyFilters() {
+      document.querySelectorAll('.filter-btn, .chip').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+      document.querySelectorAll('.type-btn, .type-chip').forEach(b => b.classList.toggle('active', b.dataset.type === typeFilter));
+      document.querySelectorAll('.card').forEach(card => {
+        const cOk = filter === 'all' || card.dataset.c === filter;
+        const tOk = typeFilter === '전체' || card.dataset.t === typeFilter;
+        card.classList.remove('visible', 'hidden');
+        void card.offsetWidth;
+        card.classList.add(cOk && tOk ? 'visible' : 'hidden');
+      });
+    }
+
+    /* ── 카드 ── */
+    function buildCards() {
+      const grid = document.getElementById('cardGrid');
+      grid.innerHTML = '';
+      posts.forEach((p, i) => {
+        const cOk = filter === 'all' || p.country === filter;
+        const tOk = typeFilter === '전체' || (p.placeType || '기타') === typeFilter;
+        const card = document.createElement('article');
+        card.className = 'card' + (cOk && tOk ? ' visible' : ' hidden');
+        card.dataset.i = i; card.dataset.c = p.country; card.dataset.t = p.placeType || '기타';
+
+        const src = mediaSrc(p.img), vid = isVideo(p.img);
+        const thumb = vid
+          ? `<video class="card-thumb-video" src="${src}" autoplay loop muted playsinline></video>`
+          : `<img src="${src}" alt="${p.title}" loading="lazy" onerror="this.src='${FALLBACK}'">`;
+
+        card.innerHTML = `
+          <div class="card-img-wrap">
+            ${thumb}
+            <div class="img-overlay">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              미디어 변경
+            </div>
+            <button class="card-delete-btn">×</button>
+            <button class="card-edit-btn">✎</button>
+          </div>
+          <div class="card-meta">${p.country} · ${p.city} · ${p.placeType || '기타'} · ${p.date}</div>
+          <div class="card-title">${p.title}</div>
+          <div class="card-excerpt">${p.preview}</div>
+          <button class="card-more-btn">더보기</button>`;
+
+        card.querySelector('.card-more-btn').addEventListener('click', () => { if (!editMode) openDetail(i); });
+        card.querySelector('.card-edit-btn').addEventListener('click', e => { e.stopPropagation(); openDetail(i); });
+        card.querySelector('.img-overlay').addEventListener('click', e => {
+          e.stopPropagation();
+          if (!editMode) return;
+          const fi = document.getElementById('f-file');
+          fi.dataset.targetIdx = i; fi.click();
+        });
+        card.querySelector('.card-delete-btn').addEventListener('click', e => {
+          e.stopPropagation();
+          if (confirm(`"${p.title}"\n\n이 게시물을 삭제하시겠습니까?`)) {
+            posts.splice(i, 1); savePosts(); buildFilterBtns(); buildTypeBtns(); buildCards();
+            toast('삭제되었습니다');
+          }
+        });
+        if (editMode) {
+          const te = card.querySelector('.card-title'), ee = card.querySelector('.card-excerpt');
+          [te, ee].forEach(el => el.setAttribute('contenteditable', 'true'));
+          te.addEventListener('blur', () => { posts[i].title   = te.textContent.trim(); });
+          ee.addEventListener('blur', () => { posts[i].preview = ee.textContent.trim(); });
+        }
+        grid.appendChild(card);
+      });
+    }
+
+    /* ── 햄버거 ── */
+    const hamburger  = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      mobileMenu.classList.toggle('open', open);
+    });
+    document.addEventListener('click', e => {
+      if (!hamburger.contains(e.target) && !mobileMenu.contains(e.target)) {
+        hamburger.classList.remove('open'); mobileMenu.classList.remove('open');
+      }
+    });
+
+    /* ── 상세 페이지 ── */
+    function getFiltered() {
+      return posts.filter(p => {
+        const c = filter === 'all' || p.country === filter;
+        const t = typeFilter === '전체' || (p.placeType || '기타') === typeFilter;
+        return c && t;
+      });
+    }
+
+    function openDetail(idx) {
+      currentIdx = idx;
+      const p = posts[idx];
+      p.body = normBody(p.body);
+      const src = mediaSrc(p.img), vid = isVideo(p.img);
+      document.getElementById('detailMedia').innerHTML = vid
+        ? `<video src="${src}" autoplay muted controls loop playsinline style="width:100%;height:100%;object-fit:contain;background:#0c0c0a;display:block"></video>`
+        : `<img src="${src}" alt="${p.title}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.src='${FALLBACK}'">`;
+
+      renderDetailMeta(idx);
+      const titleEl = document.getElementById('d-title');
+      titleEl.textContent = p.title;
+      titleEl.contentEditable = editMode ? 'true' : 'false';
+      renderDetailLocation(idx);
+      renderDetailBlocks(idx);
+      updateDetailNav();
+      const el = document.getElementById('detail');
+      el.classList.add('open'); el.scrollTop = 0;
+      document.body.style.overflow = 'hidden';
+    }
+
+    function renderDetailMeta(idx) {
+      const p = posts[idx], e = editMode ? 'true' : 'false';
+      document.getElementById('d-meta').innerHTML =
+        `<span contenteditable="${e}" data-field="country">${p.country}</span>` +
+        `<span class="sep"> · </span>` +
+        `<span contenteditable="${e}" data-field="city">${p.city}</span>` +
+        `<span class="sep"> · </span>` +
+        `<span contenteditable="${e}" data-field="placeType">${p.placeType || '기타'}</span>` +
+        `<span class="sep"> · </span>` +
+        `<span contenteditable="${e}" data-field="date">${p.date}</span>`;
+    }
+
+    document.getElementById('d-meta').addEventListener('input', e => {
+      if (!editMode || currentIdx < 0) return;
+      const span = e.target.closest('[data-field]'); if (!span) return;
+      const f = span.dataset.field;
+      posts[currentIdx][f] = span.textContent.trim();
+      if (f === 'country' || f === 'placeType') { buildFilterBtns(); buildTypeBtns(); }
+    });
+    document.getElementById('d-title').addEventListener('input', () => {
+      if (!editMode || currentIdx < 0) return;
+      posts[currentIdx].title = document.getElementById('d-title').textContent.trim();
+    });
+
+    /* ── 장소 링크 ── */
+    const PIN_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>`;
+
+    function extractLocName(url) {
+      try {
+        const u = new URL(url);
+        /* /maps/place/PlaceName/@ 형식 */
+        const m = u.pathname.match(/\/maps\/place\/([^/@?]+)/);
+        if (m) return decodeURIComponent(m[1].replace(/\+/g, ' '));
+        /* ?query= 또는 ?q= 형식 */
+        const q = u.searchParams.get('query') || u.searchParams.get('q');
+        if (q) return decodeURIComponent(q.replace(/\+/g, ' '));
+      } catch {}
+      return '';
+    }
+
+    function renderDetailLocation(idx) {
+      const p = posts[idx];
+      const el = document.getElementById('d-location');
+      const locUrl  = p.locationUrl  || '';
+      const locName = p.locationName || '';
+
+      if (editMode) {
+        const outer = document.createElement('div');
+        outer.style.marginBottom = '2rem';
+
+        const row = document.createElement('div');
+        row.className = 'detail-loc-wrap';
+        row.innerHTML = PIN_SVG;
+
+        const input = document.createElement('input');
+        input.type = 'url';
+        input.className = 'detail-loc-input';
+        input.value = locUrl;
+        input.placeholder = '구글맵 링크 붙여넣기';
+
+        const preview = document.createElement('div');
+        preview.className = 'detail-loc-preview';
+        preview.textContent = locName ? `→ ${locName}` : (locUrl ? '→ 장소 보기' : '');
+
+        input.addEventListener('input', () => {
+          const v = input.value.trim();
+          const extracted = extractLocName(v);
+          posts[idx].locationUrl  = v;
+          posts[idx].locationName = extracted;
+          preview.textContent = extracted ? `→ ${extracted}` : (v ? '→ 장소 보기' : '');
+        });
+
+        row.appendChild(input);
+        outer.appendChild(row);
+        outer.appendChild(preview);
+        el.innerHTML = '';
+        el.appendChild(outer);
+      } else {
+        if (!locUrl) { el.innerHTML = ''; return; }
+        const display = locName || '장소 보기';
+        el.innerHTML = `<div class="detail-location"><a href="${locUrl}" target="_blank" rel="noopener noreferrer">${PIN_SVG}${display}</a></div>`;
+      }
+    }
+
+    /* ── 블록 렌더링 ── */
+    function renderDetailBlocks(postIdx) {
+      const blocks = posts[postIdx].body;
+      const container = document.getElementById('d-blocks');
+      container.innerHTML = '';
+      blocks.forEach((blk, i) => container.appendChild(makeBlockRow(blk, i, postIdx)));
+    }
+
+    function makeBlockRow(blk, i, postIdx) {
+      const row = document.createElement('div');
+      row.className = 'block-row';
+      row.dataset.blockIdx = i;
+
+      /* 이동 버튼 (왼쪽) */
+      if (editMode) {
+        const col = document.createElement('div');
+        col.className = 'block-move-col';
+        ['↑','↓'].forEach((sym, d) => {
+          const b = document.createElement('button');
+          b.className = 'move-btn'; b.textContent = sym;
+          b.title = d === 0 ? '위로 이동' : '아래로 이동';
+          b.addEventListener('click', () => moveBlock(i, d === 0 ? -1 : 1, postIdx));
+          col.appendChild(b);
+        });
+        row.appendChild(col);
+      }
+
+      const content = document.createElement('div');
+      content.className = 'block-content';
+
+      if (blk.type === 'text') {
+        const div = document.createElement('div');
+        div.className = 'body-text-block';
+        div.innerHTML = blk.content;
+        if (editMode) {
+          div.contentEditable = 'true';
+          div.addEventListener('input', () => { posts[postIdx].body[i].content = div.innerHTML; });
+        }
+        content.appendChild(div);
+        if (editMode) {
+          const del = document.createElement('button');
+          del.className = 'text-blk-del'; del.textContent = '× 텍스트 블록 삭제';
+          del.addEventListener('click', () => {
+            if (confirm('이 텍스트 블록을 삭제하시겠습니까?')) {
+              posts[postIdx].body.splice(i, 1); renderDetailBlocks(postIdx);
+            }
+          });
+          content.appendChild(del);
+        }
+
+      } else if (blk.type === 'img-group') {
+        const wrap = document.createElement('div');
+        wrap.className = 'img-group-wrap';
+
+        /* 열 전환 버튼 */
+        if (editMode) {
+          const tog = document.createElement('button');
+          tog.className = 'cols-toggle';
+          tog.textContent = `${blk.cols || 1}열`;
+          tog.addEventListener('click', () => {
+            blk.cols = ((blk.cols || 1) % 3) + 1;
+            renderDetailBlocks(postIdx);
+          });
+          wrap.appendChild(tog);
+        }
+
+        /* 이미지 그리드 */
+        const grid = document.createElement('div');
+        grid.className = `img-group cols-${blk.cols || 1}`;
+
+        (blk.images || []).forEach((imgData, j) => {
+          grid.appendChild(makeImgCell(imgData, i, j, postIdx));
+        });
+
+        /* 이미지 추가 셀 */
+        if (editMode) {
+          const addCell = document.createElement('div');
+          addCell.className = 'img-add-cell';
+          addCell.innerHTML = '<span>+</span>';
+          addCell.addEventListener('click', () => {
+            dImgMode = { mode:'add', gi: i };
+            document.getElementById('d-img-file').click();
+          });
+          grid.appendChild(addCell);
+        }
+
+        wrap.appendChild(grid);
+
+        /* 그룹 삭제 */
+        if (editMode) {
+          const del = document.createElement('button');
+          del.className = 'img-grp-del'; del.textContent = '× 이미지 블록 삭제';
+          del.addEventListener('click', () => {
+            if (confirm('이 이미지 블록 전체를 삭제하시겠습니까?')) {
+              posts[postIdx].body.splice(i, 1); renderDetailBlocks(postIdx);
+            }
+          });
+          wrap.appendChild(del);
+        }
+        content.appendChild(wrap);
+      }
+
+      row.appendChild(content);
+      return row;
+    }
+
+    function makeImgCell(imgData, gi, ii, postIdx) {
+      const cell = document.createElement('div');
+      cell.className = 'img-cell';
+
+      const img = document.createElement('img');
+      img.src = mediaSrc(imgData.src);
+      img.alt = imgData.caption || '';
+      img.onerror = () => { img.src = FALLBACK; };
+      cell.appendChild(img);
+
+      /* 캡션 */
+      const cap = document.createElement('div');
+      cap.className = 'img-caption';
+      cap.textContent = imgData.caption || '';
+      if (editMode) {
+        cap.contentEditable = 'true';
+        cap.dataset.ph = '캡션 입력 (선택)';
+        cap.addEventListener('input', () => {
+          posts[postIdx].body[gi].images[ii].caption = cap.textContent.trim();
+        });
+      }
+      cell.appendChild(cap);
+
+      /* 셀 컨트롤 */
+      if (editMode) {
+        const ctrl = document.createElement('div');
+        ctrl.className = 'cell-ctrl';
+
+        const replBtn = document.createElement('button');
+        replBtn.className = 'cell-btn'; replBtn.textContent = '교체';
+        replBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          dImgMode = { mode:'replace', gi, ii };
+          document.getElementById('d-img-file').click();
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'cell-btn'; delBtn.textContent = '×';
+        delBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const imgs = posts[postIdx].body[gi].images;
+          if (imgs.length <= 1) {
+            if (confirm('마지막 이미지입니다. 블록 전체를 삭제하시겠습니까?')) {
+              posts[postIdx].body.splice(gi, 1); renderDetailBlocks(postIdx);
+            }
+          } else {
+            imgs.splice(ii, 1); renderDetailBlocks(postIdx);
+          }
+        });
+
+        ctrl.appendChild(replBtn); ctrl.appendChild(delBtn);
+        cell.appendChild(ctrl);
+      }
+      return cell;
+    }
+
+    function moveBlock(i, dir, postIdx) {
+      const blocks = posts[postIdx].body;
+      const ni = i + dir;
+      if (ni < 0 || ni >= blocks.length) return;
+      [blocks[i], blocks[ni]] = [blocks[ni], blocks[i]];
+      renderDetailBlocks(postIdx);
+    }
+
+    /* 상세 본문 이미지 파일 처리 */
+    document.getElementById('d-img-file').addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file || currentIdx < 0) return;
+      const path = `images/${file.name}`;
+      MEDIA_STORE[path] = URL.createObjectURL(file);
+      const blocks = posts[currentIdx].body;
+      const m = dImgMode;
+      if (!m || m.mode === 'new') {
+        blocks.push({ type:'img-group', cols:1, images:[{ src:path, caption:'' }] });
+      } else if (m.mode === 'add') {
+        blocks[m.gi].images.push({ src:path, caption:'' });
+      } else if (m.mode === 'replace') {
+        blocks[m.gi].images[m.ii].src = path;
+      }
+      dImgMode = null;
+      renderDetailBlocks(currentIdx);
+      e.target.value = '';
+    });
+
+    /* 하단 액션 버튼 */
+    document.getElementById('d-add-img').addEventListener('click', () => {
+      dImgMode = { mode:'new' };
+      document.getElementById('d-img-file').click();
+    });
+    document.getElementById('d-add-text').addEventListener('click', () => {
+      if (currentIdx < 0) return;
+      posts[currentIdx].body.push({ type:'text', content:'<p></p>' });
+      renderDetailBlocks(currentIdx);
+      setTimeout(() => {
+        const txts = document.querySelectorAll('.body-text-block[contenteditable="true"]');
+        if (txts.length) txts[txts.length - 1].focus();
+      }, 50);
+    });
+
+    function closeDetail() {
+      const vid = document.querySelector('#detailMedia video');
+      if (vid) vid.pause();
+      document.getElementById('detail').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    function updateDetailNav() {
+      const filtered = getFiltered();
+      const fi = filtered.findIndex(p => p.id === posts[currentIdx].id);
+      const hp = fi > 0, hn = fi < filtered.length - 1;
+      ['prevBtn','prevBtnM'].forEach(id => {
+        const b = document.getElementById(id); b.disabled = !hp;
+        b.onclick = () => hp && openDetail(posts.findIndex(x => x.id === filtered[fi-1].id));
+      });
+      ['nextBtn','nextBtnM'].forEach(id => {
+        const b = document.getElementById(id); b.disabled = !hn;
+        b.onclick = () => hn && openDetail(posts.findIndex(x => x.id === filtered[fi+1].id));
+      });
+    }
+    document.getElementById('detailClose').addEventListener('click', closeDetail);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { hidePwModal(); closeDetail(); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        if (editMode) { deactivateEdit(); }
+        else if (sessionAuth) { activateEdit(); }
+        else { showPwModal(); }
+      }
+    });
+
+    /* ── 스와이프 ── */
+    const detailEl = document.getElementById('detail');
+    let tx = 0, ty = 0, tScroll = 0;
+    detailEl.addEventListener('touchstart', e => { tx=e.touches[0].clientX; ty=e.touches[0].clientY; tScroll=detailEl.scrollTop; }, {passive:true});
+    detailEl.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+      if (Math.abs(dx) > Math.abs(dy)*1.5 && Math.abs(dx) > 60 && Math.abs(detailEl.scrollTop-tScroll) < 20) {
+        const filtered = getFiltered(), fi = filtered.findIndex(p => p.id === posts[currentIdx].id);
+        if (dx < 0 && fi < filtered.length-1) openDetail(posts.findIndex(x => x.id === filtered[fi+1].id));
+        else if (dx > 0 && fi > 0)            openDetail(posts.findIndex(x => x.id === filtered[fi-1].id));
+      }
+    }, {passive:true});
+
+    /* ── 패널 파일 업로드 ── */
+    const uploadArea  = document.getElementById('uploadArea');
+    const fileInput   = document.getElementById('f-file');
+    const uploadPrev  = document.getElementById('uploadPreview');
+    const uploadFname = document.getElementById('uploadFilename');
+
+    uploadArea.addEventListener('click', e => { if (e.target.closest('.upload-preview')) return; fileInput.click(); });
+    uploadArea.addEventListener('dragover',  e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+    uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f) processFile(f); });
+
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file) return;
+      const ti = e.target.dataset.targetIdx;
+      if (ti !== undefined && ti !== '') processFileForCard(file, parseInt(ti));
+      else processFile(file);
+      fileInput.value = ''; delete fileInput.dataset.targetIdx;
+    });
+
+    function processFile(file) {
+      const vid = file.type.startsWith('video/');
+      const path = `${vid?'videos':'images'}/${file.name}`;
+      MEDIA_STORE[path] = URL.createObjectURL(file);
+      pendingFile = { path, isVideo:vid };
+      uploadFname.textContent = `배포 경로: ${path}`;
+      uploadPrev.innerHTML = vid
+        ? `<video src="${MEDIA_STORE[path]}" controls style="width:100%;max-height:160px"></video>`
+        : `<img src="${MEDIA_STORE[path]}" style="width:100%;max-height:160px;object-fit:cover">`;
+    }
+    function processFileForCard(file, idx) {
+      const vid = file.type.startsWith('video/');
+      const path = `${vid?'videos':'images'}/${file.name}`;
+      MEDIA_STORE[path] = URL.createObjectURL(file);
+      posts[idx].img = path; savePosts(); buildCards(); toast('미디어가 변경되었습니다');
+    }
+
+    /* ── 편집 모드 ── */
+    function showPwModal() {
+      const modal = document.getElementById('pw-modal');
+      document.getElementById('pw-input').value = '';
+      modal.style.display = 'flex';
+      setTimeout(() => document.getElementById('pw-input').focus(), 50);
+    }
+    function hidePwModal() {
+      document.getElementById('pw-modal').style.display = 'none';
+    }
+    function submitPw() {
+      const pw = document.getElementById('pw-input').value;
+      hidePwModal();
+      if (pw === EDIT_PW) { sessionAuth = true; activateEdit(); }
+    }
+    document.getElementById('pw-ok').addEventListener('click', submitPw);
+    document.getElementById('pw-cancel').addEventListener('click', hidePwModal);
+    document.getElementById('pw-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); submitPw(); }
+      if (e.key === 'Escape') { e.stopPropagation(); hidePwModal(); }
+    });
+    document.getElementById('pw-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('pw-modal')) hidePwModal();
+    });
+
+    function applyEditState() {
+      document.body.classList.toggle('edit-mode', editMode);
+      document.body.classList.toggle('edit-active', editMode);
+      ['editToggle','editToggleMobile'].forEach(id => document.getElementById(id).classList.toggle('active', editMode));
+      document.getElementById('edit-bar').classList.toggle('show', editMode);
+      buildCards();
+      if (document.getElementById('detail').classList.contains('open') && currentIdx >= 0) {
+        renderDetailMeta(currentIdx);
+        document.getElementById('d-title').contentEditable = editMode ? 'true' : 'false';
+        renderDetailLocation(currentIdx);
+        renderDetailBlocks(currentIdx);
+      }
+    }
+    function activateEdit() {
+      editMode = true;
+      applyEditState();
+    }
+    function deactivateEdit() {
+      editMode = false;
+      document.getElementById('edit-panel').classList.remove('open');
+      savePosts();
+      applyEditState();
+    }
+    document.getElementById('editToggle').addEventListener('click', deactivateEdit);
+    document.getElementById('editToggleMobile').addEventListener('click', () => { deactivateEdit(); hamburger.classList.remove('open'); mobileMenu.classList.remove('open'); });
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      deactivateEdit();
+      buildFilterBtns(); buildTypeBtns();
+      toast('저장되었습니다 ✓');
+    });
+
+    /* ── 새 글 추가 ── */
+    document.getElementById('addBtn').addEventListener('click', () => { pendingFile=null; uploadPrev.innerHTML=''; uploadFname.textContent=''; document.getElementById('edit-panel').classList.add('open'); });
+    document.getElementById('panelClose').addEventListener('click', () => document.getElementById('edit-panel').classList.remove('open'));
+    document.getElementById('submitPost').addEventListener('click', () => {
+      const country   = document.getElementById('f-country').value;
+      const placeType = document.getElementById('f-type').value;
+      const city      = document.getElementById('f-city').value.trim();
+      const dateRaw   = document.getElementById('f-date').value;
+      const title     = document.getElementById('f-title').value.trim();
+      const preview   = document.getElementById('f-preview').value.trim();
+      const bodyRaw   = document.getElementById('f-body').value.trim();
+      if (!city||!title||!preview||!bodyRaw) { toast('도시, 제목, 미리보기, 본문을 입력해주세요'); return; }
+      let date = '날짜 미정';
+      if (dateRaw) { const d=new Date(dateRaw); date=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; }
+      const bodyBlocks = [{ type:'text', content: bodyRaw.split(/\n\n+/).map(s=>`<p>${s.replace(/\n/g,'<br>')}</p>`).join('') }];
+      posts.unshift({ id:Date.now(), country, city, date, placeType, title, preview, body:bodyBlocks, img:pendingFile?pendingFile.path:FALLBACK });
+      savePosts(); buildFilterBtns(); buildTypeBtns(); buildCards();
+      ['f-city','f-date','f-title','f-preview','f-body'].forEach(id=>{ document.getElementById(id).value=''; });
+      uploadPrev.innerHTML=''; uploadFname.textContent=''; pendingFile=null;
+      document.getElementById('edit-panel').classList.remove('open');
+      toast('새 글이 추가되었습니다 ✓');
+    });
+
+    /* ── 토스트 ── */
+    let toastTimer;
+    function toast(msg) { const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2500); }
+
+    /* ── 이미지 경로 자동 보정 ──
+       업로드 시 images/filename.ext 으로 저장되나,
+       실제 파일은 images/하위폴더/filename.ext 에 있을 수 있음.
+       HEAD 요청으로 확인 후 올바른 경로로 수정한다. */
+    const IMG_SUBDIRS = ['Koan', '교토 미호박물관'];
+
+    async function probeImagePath(src) {
+      if (!src) return src;
+      if (src.startsWith('http') || src.startsWith('data') || src.startsWith('blob')) return src;
+      // 이미 하위 폴더 포함 경로면 스킵
+      if (src.split('/').length > 2) return src;
+      try { const r = await fetch(src, {method:'HEAD', cache:'no-store'}); if (r.ok) return src; } catch {}
+      const filename = src.split('/').pop();
+      for (const dir of IMG_SUBDIRS) {
+        const alt = `images/${dir}/${filename}`;
+        try { const r = await fetch(alt, {method:'HEAD', cache:'no-store'}); if (r.ok) return alt; } catch {}
+      }
+      return src;
+    }
+
+    async function fixBrokenImagePaths() {
+      let changed = false;
+      for (const p of posts) {
+        const fixed = await probeImagePath(p.img);
+        if (fixed !== p.img) { p.img = fixed; changed = true; }
+        if (Array.isArray(p.body)) {
+          for (const blk of p.body) {
+            if (blk.type === 'img-group' && Array.isArray(blk.images)) {
+              for (const imgData of blk.images) {
+                const fixedSrc = await probeImagePath(imgData.src);
+                if (fixedSrc !== imgData.src) { imgData.src = fixedSrc; changed = true; }
+              }
+            }
+          }
+        }
+      }
+      if (changed) { savePosts(); buildCards(); }
+    }
+
+    /* ── 초기화 ── */
+    loadPosts(); loadPersona();
+    document.getElementById('f-date').valueAsDate = new Date();
+    buildFilterBtns(); buildTypeBtns(); buildCards();
+    fixBrokenImagePaths();
+  </script>
+</body>
+</html>
